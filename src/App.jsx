@@ -90,6 +90,10 @@ export default function App() {
             <ul className="space-y-3">
               {contacts.map((contact) => {
                 const daysSince = getDaysSince(contact.lastContactDate)
+                let statusColor = "text-green-600"
+
+if (daysSince >= 3) statusColor = "text-yellow-600"
+if (daysSince >= 8) statusColor = "text-red-600"
 
                 return (
                   <li
@@ -100,7 +104,7 @@ export default function App() {
                       {contact.name}
                     </div>
 
-                    <div className="mt-1 text-sm text-slate-500">
+                    <div className={`mt-1 text-sm ${statusColor}`}>
                       Senaste kontakt: {daysSince} dagar sedan
                     </div>
 
