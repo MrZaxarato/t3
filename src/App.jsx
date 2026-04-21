@@ -1,20 +1,37 @@
 import { useState, useEffect } from 'react'
+import { supabase } from './supabase'
 
 export default function App() {
   const [name, setName] = useState('')
   const [contacts, setContacts] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const savedContacts = localStorage.getItem('t3-contacts')
+  async function loadContacts() {
+    const { data, error } = await supabase
+      .from('contacts')
+      .select('*')
+      .order('created_at', { ascending: false })
 
-    if (savedContacts) {
-      setContacts(JSON.parse(savedContacts))
+    if (error) {
+      console.error('Fel vid hämtning av kontakter:', error)
+      setLoading(false)
+      return
     }
-  }, [])
+
+    const formattedContacts = (data || []).map((contact) => ({
+      id: contact.id,
+      name: contact.name,
+      lastContactDate: contact.last_contact_date,
+      createdAt: contact.created_at,
+    }))
+
+    setContacts(formattedContacts)
+    setLoading(false)
+  }
 
   useEffect(() => {
-    localStorage.setItem('t3-contacts', JSON.stringify(contacts))
-  }, [contacts])
+    loadContacts()
+  }, [])
 
   function getDaysSince(dateString) {
     const today = new Date()
@@ -27,29 +44,38 @@ export default function App() {
     return Math.floor(diffMs / (1000 * 60 * 60 * 24))
   }
 
-  function handleAddContact() {
+  async function handleAddContact() {
     const trimmedName = name.trim()
 
     if (!trimmedName) return
 
-    const newContact = {
-      id: Date.now(),
-      name: trimmedName,
-      lastContactDate: new Date().toISOString(),
+    const { error } = await supabase.from('contacts').insert([
+      {
+        name: trimmedName,
+      },
+    ])
+
+    if (error) {
+      console.error('Fel vid skapande av kontakt:', error)
+      return
     }
 
-    setContacts([newContact, ...contacts])
     setName('')
+    loadContacts()
   }
 
-  function handleContactToday(id) {
-    const updatedContacts = contacts.map((contact) =>
-      contact.id === id
-        ? { ...contact, lastContactDate: new Date().toISOString() }
-        : contact
-    )
+  async function handleContactToday(id) {
+    const { error } = await supabase
+      .from('contacts')
+      .update({ last_contact_date: new Date().toISOString() })
+      .eq('id', id)
 
-    setContacts(updatedContacts)
+    if (error) {
+      console.error('Fel vid uppdatering av kontakt:', error)
+      return
+    }
+
+    loadContacts()
   }
 
   return (
@@ -84,16 +110,18 @@ export default function App() {
             Kontakter
           </h2>
 
-          {contacts.length === 0 ? (
+          {loading ? (
+            <p className="text-slate-500">Laddar...</p>
+          ) : contacts.length === 0 ? (
             <p className="text-slate-500">Inga kontakter ännu.</p>
           ) : (
             <ul className="space-y-3">
               {contacts.map((contact) => {
                 const daysSince = getDaysSince(contact.lastContactDate)
-                let statusColor = "text-green-600"
 
-if (daysSince >= 3) statusColor = "text-yellow-600"
-if (daysSince >= 8) statusColor = "text-red-600"
+                let statusColor = 'text-green-600'
+                if (daysSince >= 3) statusColor = 'text-yellow-600'
+                if (daysSince >= 8) statusColor = 'text-red-600'
 
                 return (
                   <li
