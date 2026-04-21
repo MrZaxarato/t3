@@ -4,7 +4,6 @@ export default function App() {
   const [name, setName] = useState('')
   const [contacts, setContacts] = useState([])
 
-  // Ladda sparade kontakter när appen startar
   useEffect(() => {
     const savedContacts = localStorage.getItem('t3-contacts')
 
@@ -13,10 +12,20 @@ export default function App() {
     }
   }, [])
 
-  // Spara kontakter varje gång listan ändras
   useEffect(() => {
     localStorage.setItem('t3-contacts', JSON.stringify(contacts))
   }, [contacts])
+
+  function getDaysSince(dateString) {
+    const today = new Date()
+    const pastDate = new Date(dateString)
+
+    today.setHours(0, 0, 0, 0)
+    pastDate.setHours(0, 0, 0, 0)
+
+    const diffMs = today - pastDate
+    return Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  }
 
   function handleAddContact() {
     const trimmedName = name.trim()
@@ -26,11 +35,21 @@ export default function App() {
     const newContact = {
       id: Date.now(),
       name: trimmedName,
-      lastContact: 'Idag',
+      lastContactDate: new Date().toISOString(),
     }
 
     setContacts([newContact, ...contacts])
     setName('')
+  }
+
+  function handleContactToday(id) {
+    const updatedContacts = contacts.map((contact) =>
+      contact.id === id
+        ? { ...contact, lastContactDate: new Date().toISOString() }
+        : contact
+    )
+
+    setContacts(updatedContacts)
   }
 
   return (
@@ -69,19 +88,31 @@ export default function App() {
             <p className="text-slate-500">Inga kontakter ännu.</p>
           ) : (
             <ul className="space-y-3">
-              {contacts.map((contact) => (
-                <li
-                  key={contact.id}
-                  className="rounded-xl border border-slate-200 p-3"
-                >
-                  <div className="font-semibold text-slate-800">
-                    {contact.name}
-                  </div>
-                  <div className="text-sm text-slate-500">
-                    Senaste kontakt: {contact.lastContact}
-                  </div>
-                </li>
-              ))}
+              {contacts.map((contact) => {
+                const daysSince = getDaysSince(contact.lastContactDate)
+
+                return (
+                  <li
+                    key={contact.id}
+                    className="rounded-xl border border-slate-200 p-3"
+                  >
+                    <div className="font-semibold text-slate-800">
+                      {contact.name}
+                    </div>
+
+                    <div className="mt-1 text-sm text-slate-500">
+                      Senaste kontakt: {daysSince} dagar sedan
+                    </div>
+
+                    <button
+                      onClick={() => handleContactToday(contact.id)}
+                      className="mt-3 rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-900"
+                    >
+                      Jag hade kontakt idag
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
           )}
         </div>
