@@ -1,8 +1,22 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function App() {
   const [name, setName] = useState('')
   const [contacts, setContacts] = useState([])
+
+  // Ladda sparade kontakter när appen startar
+  useEffect(() => {
+    const savedContacts = localStorage.getItem('t3-contacts')
+
+    if (savedContacts) {
+      setContacts(JSON.parse(savedContacts))
+    }
+  }, [])
+
+  // Spara kontakter varje gång listan ändras
+  useEffect(() => {
+    localStorage.setItem('t3-contacts', JSON.stringify(contacts))
+  }, [contacts])
 
   function handleAddContact() {
     const trimmedName = name.trim()
